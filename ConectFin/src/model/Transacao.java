@@ -10,24 +10,30 @@ public class Transacao {
     private String descricao;
     private int usuarioId;
     private int categoriaId;
+    private int formaPagamentoId;
     private String tipo; // E para Entrada, S para Saída
 
-    public Transacao(int id, BigDecimal valor, LocalDate data, String descricao, int usuarioId, int categoriaId, String tipo) {
+    public Transacao() {
+    }
+
+    public Transacao(BigDecimal valor, LocalDate data, String descricao, int usuarioId, int categoriaId, int formaPagamentoId, String tipo) {
+        this.valor = valor;
+        this.data = data;
+        this.descricao = descricao;
+        this.usuarioId = usuarioId;
+        this.categoriaId = categoriaId;
+        this.formaPagamentoId = formaPagamentoId;
+        this.tipo = tipo;
+    }
+
+    public Transacao(int id, BigDecimal valor, LocalDate data, String descricao, int usuarioId, int categoriaId, int formaPagamentoId, String tipo) {
         this.id = id;
         this.valor = valor;
         this.data = data;
         this.descricao = descricao;
         this.usuarioId = usuarioId;
         this.categoriaId = categoriaId;
-        this.tipo = tipo;
-    }
-
-    public Transacao(BigDecimal valor, LocalDate data, String descricao, int usuarioId, int categoriaId, String tipo) {
-        this.valor = valor;
-        this.data = data;
-        this.descricao = descricao;
-        this.usuarioId = usuarioId;
-        this.categoriaId = categoriaId;
+        this.formaPagamentoId = formaPagamentoId;
         this.tipo = tipo;
     }
 
@@ -79,6 +85,14 @@ public class Transacao {
         this.categoriaId = categoriaId;
     }
 
+    public int getFormaPagamentoId() {
+        return formaPagamentoId;
+    }
+
+    public void setFormaPagamentoId(int formaPagamentoId) {
+        this.formaPagamentoId = formaPagamentoId;
+    }
+
     public String getTipo() {
         return tipo;
     }
@@ -96,6 +110,7 @@ public class Transacao {
                 ", descricao='" + descricao + '\'' +
                 ", usuarioId=" + usuarioId +
                 ", categoriaId=" + categoriaId +
+                ", formaPagamentoId=" + formaPagamentoId +
                 ", tipo='" + tipo + '\'' +
                 '}';
     }

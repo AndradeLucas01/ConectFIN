@@ -10,17 +10,22 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import model.Transacao;
+import util.Conexao;
 
 public class TransacaoRepository implements InterfaceTransacaoRepository {
     private Connection connection;
 
-    public TransacaoRepository(Connection connection) {
-        this.connection = connection;
+    public TransacaoRepository() {
+        try {
+            this.connection = Conexao.conectar();
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao conectar ao banco de dados", e);
+        }
     }
 
     @Override
     public Transacao inserirTransacao(Transacao transacao) throws SQLException {
-        String sql = "INSERT INTO transacao (valor, data, descricao, usuario_id, categoria_id, tipo) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO transacao (valor, data, descricao, usuario_id, categoria_id, forma_pagamento_id, tipo) VALUES (?, ?, ?, ?, ?, ?, ?)";
         
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setBigDecimal(1, transacao.getValor());
@@ -28,7 +33,8 @@ public class TransacaoRepository implements InterfaceTransacaoRepository {
             stmt.setString(3, transacao.getDescricao());
             stmt.setInt(4, transacao.getUsuarioId());
             stmt.setInt(5, transacao.getCategoriaId());
-            stmt.setString(6, transacao.getTipo());
+            stmt.setInt(6, transacao.getFormaPagamentoId());
+            stmt.setString(7, transacao.getTipo());
             
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
@@ -48,16 +54,17 @@ public class TransacaoRepository implements InterfaceTransacaoRepository {
 
     @Override
     public Transacao atualizarTransacao(Transacao transacao) throws SQLException {
-        String sql = "UPDATE transacao SET valor = ?, data = ?, descricao = ?, categoria_id = ?, tipo = ? WHERE id = ? AND usuario_id = ?";
+        String sql = "UPDATE transacao SET valor = ?, data = ?, descricao = ?, categoria_id = ?, forma_pagamento_id = ?, tipo = ? WHERE id = ? AND usuario_id = ?";
         
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setBigDecimal(1, transacao.getValor());
             stmt.setDate(2, Date.valueOf(transacao.getData()));
             stmt.setString(3, transacao.getDescricao());
             stmt.setInt(4, transacao.getCategoriaId());
-            stmt.setString(5, transacao.getTipo());
-            stmt.setInt(6, transacao.getId());
-            stmt.setInt(7, transacao.getUsuarioId());
+            stmt.setInt(5, transacao.getFormaPagamentoId());
+            stmt.setString(6, transacao.getTipo());
+            stmt.setInt(7, transacao.getId());
+            stmt.setInt(8, transacao.getUsuarioId());
             
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
@@ -187,6 +194,7 @@ public class TransacaoRepository implements InterfaceTransacaoRepository {
             rs.getString("descricao"),
             rs.getInt("usuario_id"),
             rs.getInt("categoria_id"),
+            rs.getInt("forma_pagamento_id"),
             rs.getString("tipo")
         );
     }

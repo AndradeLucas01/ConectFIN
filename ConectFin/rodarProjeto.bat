@@ -4,24 +4,28 @@ echo Compilando o projeto...
 
 cd /d "%~dp0"
 
+echo Limpando diretorio bin...
+if exist bin rmdir /s /q bin
+mkdir bin
+
 echo Compilando classes do modelo...
 javac -d bin -cp "lib/*" src\model\*.java
 
-echo Compilando interfaces e implementações do repositório...
+echo Compilando utilitarios...
+javac -d bin -cp "lib/*;bin" src\util\*.java
+
+echo Compilando interfaces e implementacoes do repositorio...
 javac -d bin -cp "lib/*;bin" src\repository\*.java
 
-echo Compilando serviços...
+echo Compilando servicos...
 javac -d bin -cp "lib/*;bin" src\service\*.java
-
-echo Compilando utilitários...
-javac -d bin -cp "lib/*;bin" src\util\*.java
 
 echo Compilando classe principal...
 javac -d bin -cp "lib/*;bin" src\Main.java
 
 if %errorlevel% neq 0 (
     echo.
-    echo Houve um erro na compilacao. Verifique seu código!
+    echo Houve um erro na compilacao. Verifique seu codigo!
     pause
     exit /b
 )

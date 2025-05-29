@@ -1,122 +1,122 @@
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Scanner;
 import model.Categoria;
+import model.FormaPagamento;
+import model.MetaFinanceira;
 import model.Transacao;
 import model.Usuario;
 import service.CategoriaService;
+import service.FormaPagamentoService;
+import service.MetaFinanceiraService;
 import service.TransacaoService;
 import service.UsuarioService;
 
 public class Main {
-    private static final Scanner scanner = new Scanner(System.in);
-    private static int usuarioLogadoId = -1;
-    private static String papelUsuarioLogado = null;
+    private static Scanner scanner = new Scanner(System.in);
+    private static Usuario usuarioLogado = null;
 
     public static void limparTela() {
-        try {
-            String os = System.getProperty("os.name");
-            if (os.contains("Windows")) {
-                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
-            } else {
-                new ProcessBuilder("clear").inheritIO().start().waitFor();
-            }
-        } catch (IOException | InterruptedException e) {
-            System.out.println("Erro ao limpar a tela: " + e.getMessage());
-        }
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
     }
 
     public static void main(String[] args) {
-        boolean executando = true;
+        menuPrincipal();
+    }
 
-        while (executando) {
-            if (usuarioLogadoId == -1) {
-                executando = exibirMenuAutenticacao();
-            } else {
-                executando = exibirMenuPrincipal();
+    private static void menuPrincipal() {
+        UsuarioService usuarioService = new UsuarioService();
+        
+        while (true) {
+            System.out.println("\n=== Menu Principal ===");
+            System.out.println("1. Login");
+            System.out.println("2. Cadastrar Usuário");
+            System.out.println("0. Sair");
+            System.out.print("Opção: ");
+            
+            int opcao = Integer.parseInt(scanner.nextLine());
+            
+            switch (opcao) {
+                case 0:
+                    System.out.println("Saindo do sistema...");
+                    return;
+                case 1:
+                    login(usuarioService);
+                    if (usuarioLogado != null) {
+                        menuSistema();
+                    }
+                    break;
+                case 2:
+                    cadastrarUsuario(usuarioService);
+                    break;
+                default:
+                    System.out.println("Opção inválida!");
             }
         }
-        scanner.close();
     }
 
-    private static boolean exibirMenuAutenticacao() {
-        System.out.println("\n=== AUTENTICAÇÃO ===");
-        System.out.println("1 - Fazer Login");
-        System.out.println("2 - Cadastrar Novo Usuário");
-        System.out.println("3 - Sair");
-        System.out.println("==========================");
-
-        int opcao = lerInteiro("Escolha uma opção: ");
-
-        switch (opcao) {
-            case 1:
-                fazerLogin();
-                break;
-            case 2:
-                cadastrarNovoUsuario();
-                break;
-            case 3:
-                return false;
-            default:
-                System.out.println("Opção inválida!");
-        }
-
-        return true;
-    }
-
-    private static void fazerLogin() {
-        System.out.println("\n=== LOGIN ===");
-        String identificador = lerString("E-mail ou CPF: ");
-        String senha = lerString("Senha: ");
-
+    private static void login(UsuarioService usuarioService) {
         try {
-            UsuarioService usuarioService = new UsuarioService();
+            System.out.println("\n=== Login ===");
+            System.out.print("Email ou CPF: ");
+            String identificador = scanner.nextLine();
+            System.out.print("Senha: ");
+            String senha = scanner.nextLine();
+
             Usuario usuario = usuarioService.login(identificador, senha);
-            usuarioLogadoId = usuario.getId();
-            papelUsuarioLogado = usuario.getPapel();
-            System.out.println("Login realizado com sucesso!");
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+            if (usuario != null) {
+                usuarioLogado = usuario;
+                System.out.println("Login realizado com sucesso!");
+            } else {
+                System.out.println("Credenciais inválidas!");
+            }
+        } catch (SQLException e) {
+            System.out.println("Erro ao realizar login: " + e.getMessage());
         }
     }
 
-    private static void cadastrarNovoUsuario() {
-        System.out.println("\n=== CADASTRO DE USUÁRIO ===");
-        String nome = lerString("Nome: ");
-        String email = lerString("Email: ");
-        String senha = lerString("Senha: ");
-        String papel = lerString("Papel (ADMIN/USUARIO): ");
-        String cpf = lerString("CPF (11 dígitos): ");
-
+    private static void cadastrarUsuario(UsuarioService usuarioService) {
         try {
-            UsuarioService usuarioService = new UsuarioService();
-            Usuario novoUsuario = new Usuario();
-            novoUsuario.setNome(nome);
-            novoUsuario.setEmail(email);
-            novoUsuario.setSenha(senha);
-            novoUsuario.setPapel(papel);
-            novoUsuario.setCpf(cpf);
+            System.out.println("\n=== Cadastro de Usuário ===");
+            System.out.print("Nome: ");
+            String nome = scanner.nextLine();
+            System.out.print("Email: ");
+            String email = scanner.nextLine();
+            System.out.print("Senha: ");
+            String senha = scanner.nextLine();
+            System.out.print("CPF: ");
+            String cpf = scanner.nextLine();
+            System.out.print("Papel (ADMIN/USER): ");
+            String papel = scanner.nextLine().toUpperCase();
 
-            usuarioService.cadastrarUsuario(novoUsuario);
-            System.out.println("Usuário cadastrado com sucesso! Por favor, faça login.");
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+            Usuario usuario = new Usuario();
+            usuario.setNome(nome);
+            usuario.setEmail(email);
+            usuario.setSenha(senha);
+            usuario.setCpf(cpf);
+            usuario.setPapel(papel);
+
+            usuarioService.cadastrarUsuario(usuario);
+            System.out.println("Usuário cadastrado com sucesso!");
+        } catch (SQLException e) {
+            System.out.println("Erro ao cadastrar usuário: " + e.getMessage());
         }
     }
 
     private static boolean exibirMenuPrincipal() {
         System.out.println("\n==== MENU PRINCIPAL =====");
         System.out.println("1 - Transações");
-        if (papelUsuarioLogado.equalsIgnoreCase("ADMIN")) {
+        if (usuarioLogado.getPapel().equalsIgnoreCase("ADMIN")) {
             System.out.println("2 - Usuários");
         }
         System.out.println("3 - Categorias");
-        System.out.println("4 - Sair");
-        System.out.println("5 - Logout");
+        System.out.println("4 - Meta Financeira");
+        System.out.println("5 - Formas de Pagamento");
+        System.out.println("6 - Sair");
+        System.out.println("7 - Logout");
         System.out.println("=========================");
 
         int opcao = lerInteiro("Escolha uma opção: ");
@@ -126,7 +126,7 @@ public class Main {
                 menuTransacoes();
                 break;
             case 2:
-                if (papelUsuarioLogado.equalsIgnoreCase("ADMIN")) {
+                if (usuarioLogado.getPapel().equalsIgnoreCase("ADMIN")) {
                     menuUsuarios();
                 } else {
                     System.out.println("Acesso negado: apenas administradores podem acessar o menu de usuários.");
@@ -136,8 +136,14 @@ public class Main {
                 menuCategorias();
                 break;
             case 4:
-                return false;
+                menuMetasFinanceiras();
+                break;
             case 5:
+                menuFormasPagamento();
+                break;
+            case 6:
+                return false;
+            case 7:
                 fazerLogout();
                 break;
             default:
@@ -148,63 +154,60 @@ public class Main {
     }
 
     private static void fazerLogout() {
-        usuarioLogadoId = -1;
-        papelUsuarioLogado = null;
+        usuarioLogado = null;
         System.out.println("Logout realizado com sucesso!");
     }
 
     private static void menuTransacoes() {
-        System.out.println("\n=== MENU DE TRANSAÇÕES ===");
-        System.out.println("1 - Adicionar Transação");
-        System.out.println("2 - Atualizar Transação");
-        System.out.println("3 - Excluir Transação");
-        System.out.println("4 - Gerar Exemplos");
-        System.out.println("5 - Listar Transações");
-        System.out.println("6 - Listar transações por período");
-        System.out.println("7 - Listar por tipo (Entrada/Saída)");
-        if (papelUsuarioLogado.equalsIgnoreCase("ADMIN")) {
-            System.out.println("8 - Listar Todas as Transações");
-        }
-        System.out.println("9 - Voltar");
-        System.out.println("=========================");
-
-        int opcao = lerInteiro("Escolha uma opção: ");
-
         TransacaoService transacaoService = new TransacaoService();
-
-        switch (opcao) {
-            case 1:
-                adicionarTransacao(transacaoService);
-                break;
-            case 2:
-                atualizarTransacao(transacaoService);
-                break;
-            case 3:
-                excluirTransacao(transacaoService);
-                break;
-            case 4:
-                gerarTransacoesExemplo(transacaoService);
-                break;
-            case 5:
-                listarTransacoes(transacaoService);
-                break;
-            case 6:
-                listarTransacoesPorPeriodo(transacaoService);
-                break;
-            case 7:
-                listarTransacoesPorTipo(transacaoService);
-                break;
-            case 8:
-                if (papelUsuarioLogado.equalsIgnoreCase("ADMIN")) {
-                    listarTodasTransacoes(transacaoService);
-                } else {
-                    System.out.println("Acesso negado: apenas administradores podem listar todas as transações.");
-                }
-                break;
-            case 9:
-                return;
-            default:
-                System.out.println("Opção inválida!");
+        
+        while (true) {
+            System.out.println("\n=== Menu de Transações ===");
+            System.out.println("1. Listar Transações");
+            System.out.println("2. Adicionar Transação");
+            System.out.println("3. Atualizar Transação");
+            System.out.println("4. Excluir Transação");
+            System.out.println("5. Listar por Período");
+            System.out.println("6. Listar por Tipo");
+            if (usuarioLogado.getPapel().equals("ADMIN")) {
+                System.out.println("7. Listar Todas as Transações");
+            }
+            System.out.println("0. Voltar");
+            System.out.print("Opção: ");
+            
+            int opcao = Integer.parseInt(scanner.nextLine());
+            
+            switch (opcao) {
+                case 0:
+                    return;
+                case 1:
+                    listarTransacoes(transacaoService);
+                    break;
+                case 2:
+                    adicionarTransacao(transacaoService);
+                    break;
+                case 3:
+                    atualizarTransacao(transacaoService);
+                    break;
+                case 4:
+                    excluirTransacao(transacaoService);
+                    break;
+                case 5:
+                    listarTransacoesPorPeriodo(transacaoService);
+                    break;
+                case 6:
+                    listarTransacoesPorTipo(transacaoService);
+                    break;
+                case 7:
+                    if (usuarioLogado.getPapel().equals("ADMIN")) {
+                        listarTodasTransacoes(transacaoService);
+                    } else {
+                        System.out.println("Acesso negado! Apenas administradores podem acessar esta opção.");
+                    }
+                    break;
+                default:
+                    System.out.println("Opção inválida!");
+            }
         }
     }
 
@@ -219,23 +222,32 @@ public class Main {
                 return;
             }
 
+            // Verificar se existem formas de pagamento
+            FormaPagamentoService formaService = new FormaPagamentoService();
+            List<FormaPagamento> formas = formaService.listarFormas();
+            
+            if (formas.isEmpty()) {
+                System.out.println("Erro: Não existem formas de pagamento cadastradas. Por favor, cadastre algumas formas primeiro.");
+                return;
+            }
+
             // Array de transações de exemplo
             Transacao[] transacoesExemplo = {
-                new Transacao(BigDecimal.valueOf(1500.00), LocalDate.parse("2024-03-01"), "Salário", usuarioLogadoId, categorias.get(0).getId(), "E"),
-                new Transacao(BigDecimal.valueOf(350.00), LocalDate.parse("2024-03-02"), "Freelance", usuarioLogadoId, categorias.get(0).getId(), "E"),
-                new Transacao(BigDecimal.valueOf(1200.00), LocalDate.parse("2024-03-03"), "Aluguel", usuarioLogadoId, categorias.get(1).getId(), "S"),
-                new Transacao(BigDecimal.valueOf(450.00), LocalDate.parse("2024-03-04"), "Supermercado", usuarioLogadoId, categorias.get(1).getId(), "S"),
-                new Transacao(BigDecimal.valueOf(200.00), LocalDate.parse("2024-03-05"), "Conta de Luz", usuarioLogadoId, categorias.get(1).getId(), "S"),
-                new Transacao(BigDecimal.valueOf(150.00), LocalDate.parse("2024-03-06"), "Internet", usuarioLogadoId, categorias.get(1).getId(), "S"),
-                new Transacao(BigDecimal.valueOf(300.00), LocalDate.parse("2024-03-07"), "Bônus", usuarioLogadoId, categorias.get(0).getId(), "E"),
-                new Transacao(BigDecimal.valueOf(180.00), LocalDate.parse("2024-03-08"), "Combustível", usuarioLogadoId, categorias.get(1).getId(), "S"),
-                new Transacao(BigDecimal.valueOf(250.00), LocalDate.parse("2024-03-09"), "Lazer", usuarioLogadoId, categorias.get(1).getId(), "S"),
-                new Transacao(BigDecimal.valueOf(400.00), LocalDate.parse("2024-03-10"), "Investimento", usuarioLogadoId, categorias.get(0).getId(), "E")
+                new Transacao(BigDecimal.valueOf(1500.00), LocalDate.parse("2024-03-01"), "Salário", usuarioLogado.getId(), categorias.get(0).getId(), formas.get(0).getId(), "E"),
+                new Transacao(BigDecimal.valueOf(350.00), LocalDate.parse("2024-03-02"), "Freelance", usuarioLogado.getId(), categorias.get(0).getId(), formas.get(0).getId(), "E"),
+                new Transacao(BigDecimal.valueOf(1200.00), LocalDate.parse("2024-03-03"), "Aluguel", usuarioLogado.getId(), categorias.get(1).getId(), formas.get(0).getId(), "S"),
+                new Transacao(BigDecimal.valueOf(450.00), LocalDate.parse("2024-03-04"), "Supermercado", usuarioLogado.getId(), categorias.get(1).getId(), formas.get(0).getId(), "S"),
+                new Transacao(BigDecimal.valueOf(200.00), LocalDate.parse("2024-03-05"), "Conta de Luz", usuarioLogado.getId(), categorias.get(1).getId(), formas.get(0).getId(), "S"),
+                new Transacao(BigDecimal.valueOf(150.00), LocalDate.parse("2024-03-06"), "Internet", usuarioLogado.getId(), categorias.get(1).getId(), formas.get(0).getId(), "S"),
+                new Transacao(BigDecimal.valueOf(300.00), LocalDate.parse("2024-03-07"), "Bônus", usuarioLogado.getId(), categorias.get(0).getId(), formas.get(0).getId(), "E"),
+                new Transacao(BigDecimal.valueOf(180.00), LocalDate.parse("2024-03-08"), "Combustível", usuarioLogado.getId(), categorias.get(1).getId(), formas.get(0).getId(), "S"),
+                new Transacao(BigDecimal.valueOf(250.00), LocalDate.parse("2024-03-09"), "Lazer", usuarioLogado.getId(), categorias.get(1).getId(), formas.get(0).getId(), "S"),
+                new Transacao(BigDecimal.valueOf(400.00), LocalDate.parse("2024-03-10"), "Investimento", usuarioLogado.getId(), categorias.get(0).getId(), formas.get(0).getId(), "E")
             };
 
             // Cadastrar cada transação
             for (Transacao transacao : transacoesExemplo) {
-                transacaoService.cadastrarTransacao(transacao);
+                transacaoService.adicionarTransacao(transacao);
             }
 
             System.out.println("10 transações de exemplo foram geradas com sucesso!");
@@ -246,24 +258,17 @@ public class Main {
 
     private static void listarTransacoes(TransacaoService transacaoService) {
         try {
-            List<Transacao> transacoes = transacaoService.listarTransacoes(usuarioLogadoId);
+            System.out.println("\n=== Listar Transações ===");
+            List<Transacao> transacoes = transacaoService.listarTransacoes(usuarioLogado.getId());
+            
             if (transacoes.isEmpty()) {
-                System.out.println("Nenhuma transação encontrada.");
+                System.out.println("Não há transações cadastradas.");
                 return;
             }
 
-            System.out.println("\nLista de Transações:");
-            System.out.printf("%-5s | %-30s | %-13s | %-12s | %-8s%n", 
-                "ID", "Descrição", "Valor", "Data", "Tipo");
-            System.out.println("-".repeat(75));
-            
-            for (Transacao t : transacoes) {
-                System.out.printf("%-5d | %-30s | R$ %-10.2f | %-12s | %-8s%n",
-                    t.getId(),
-                    t.getDescricao().length() > 30 ? t.getDescricao().substring(0, 27) + "..." : t.getDescricao(),
-                    t.getValor().doubleValue(),
-                    t.getData(),
-                    t.getTipo().equals("E") ? "Entrada" : "Saída");
+            System.out.println("\nTransações:");
+            for (Transacao transacao : transacoes) {
+                System.out.println(transacao);
             }
         } catch (Exception e) {
             System.out.println("Erro ao listar transações: " + e.getMessage());
@@ -272,9 +277,7 @@ public class Main {
 
     private static void adicionarTransacao(TransacaoService transacaoService) {
         try {
-            System.out.println("\n=== NOVA TRANSAÇÃO ===");
-            
-            // Agora solicitar os dados da transação
+            System.out.println("\n=== ADICIONAR TRANSAÇÃO ===");
             String descricao = lerString("Descrição: ");
             BigDecimal valor = BigDecimal.valueOf(lerDouble("Valor: "));
             LocalDate data = LocalDate.parse(lerString("Data (YYYY-MM-DD): "));
@@ -311,6 +314,39 @@ public class Main {
                     System.out.println("Categoria inválida! Por favor, escolha um ID da lista acima.");
                 }
             } while (!categoriaValida);
+
+            // listar todas as formas de pagamento disponíveis
+            FormaPagamentoService formaService = new FormaPagamentoService();
+            List<FormaPagamento> formas = formaService.listarFormas();
+            
+            if (formas.isEmpty()) {
+                System.out.println("Erro: Não existem formas de pagamento cadastradas. Por favor, cadastre algumas formas primeiro.");
+                return;
+            }
+            System.out.println("\nFormas de Pagamento Disponíveis:");
+            System.out.printf("%-5s | %-20s%n", "ID", "Formato");
+            System.out.println("-".repeat(30));
+            for (FormaPagamento f : formas) {
+                System.out.printf("%-5d | %-20s%n", 
+                    f.getId(), f.getFormato());
+            }
+            System.out.println();
+            
+            int formaId;
+            boolean formaValida;
+            do {
+                formaId = lerInteiro("ID da Forma de Pagamento: ");
+                formaValida = false;
+                for (FormaPagamento f : formas) {
+                    if (f.getId() == formaId) {
+                        formaValida = true;
+                        break;
+                    }
+                }
+                if (!formaValida) {
+                    System.out.println("Forma de pagamento inválida! Por favor, escolha um ID da lista acima.");
+                }
+            } while (!formaValida);
             
             String tipo;
             do {
@@ -320,18 +356,18 @@ public class Main {
                 }
             } while (!tipo.equals("E") && !tipo.equals("S"));
 
-            Transacao novaTransacao = new Transacao(valor, data, descricao, usuarioLogadoId, categoriaId, tipo);
-            transacaoService.cadastrarTransacao(novaTransacao);
-            System.out.println("Transação cadastrada com sucesso!");
+            Transacao transacao = new Transacao(valor, data, descricao, usuarioLogado.getId(), categoriaId, formaId, tipo);
+            transacaoService.adicionarTransacao(transacao);
+            System.out.println("Transação adicionada com sucesso!");
         } catch (Exception e) {
-            System.out.println("Erro ao cadastrar transação: " + e.getMessage());
+            System.out.println("Erro ao adicionar transação: " + e.getMessage());
         }
     }
 
     private static void atualizarTransacao(TransacaoService transacaoService) {
         try {
             // Listar todas as transações primeiro
-            List<Transacao> transacoes = transacaoService.listarTransacoes(usuarioLogadoId);
+            List<Transacao> transacoes = transacaoService.listarTransacoes(usuarioLogado.getId());
             if (transacoes.isEmpty()) {
                 System.out.println("Nenhuma transação encontrada para atualizar.");
                 return;
@@ -349,7 +385,72 @@ public class Main {
             String descricao = lerString("Nova descrição: ");
             BigDecimal valor = BigDecimal.valueOf(lerDouble("Novo valor: "));
             LocalDate data = LocalDate.parse(lerString("Nova data (YYYY-MM-DD): "));
-            int categoriaId = lerInteiro("Novo ID da categoria: ");
+            
+            // listar todas as categorias disponíveis
+            CategoriaService categoriaService = new CategoriaService();
+            List<Categoria> categorias = categoriaService.listarCategorias();
+            
+            if (categorias.isEmpty()) {
+                System.out.println("Erro: Não existem categorias cadastradas. Por favor, cadastre algumas categorias primeiro.");
+                return;
+            }
+            System.out.println("\nCategorias Disponíveis:");
+            System.out.printf("%-5s | %-20s | %-10s%n", "ID", "Nome", "Tipo");
+            System.out.println("-".repeat(40));
+            for (Categoria c : categorias) {
+                System.out.printf("%-5d | %-20s | %-10s%n", 
+                    c.getId(), c.getNome(), c.getTipo());
+            }
+            System.out.println();
+            
+            int categoriaId;
+            boolean categoriaValida;
+            do {
+                categoriaId = lerInteiro("ID da Categoria: ");
+                categoriaValida = false;
+                for (Categoria c : categorias) {
+                    if (c.getId() == categoriaId) {
+                        categoriaValida = true;
+                        break;
+                    }
+                }
+                if (!categoriaValida) {
+                    System.out.println("Categoria inválida! Por favor, escolha um ID da lista acima.");
+                }
+            } while (!categoriaValida);
+
+            // listar todas as formas de pagamento disponíveis
+            FormaPagamentoService formaService = new FormaPagamentoService();
+            List<FormaPagamento> formas = formaService.listarFormas();
+            
+            if (formas.isEmpty()) {
+                System.out.println("Erro: Não existem formas de pagamento cadastradas. Por favor, cadastre algumas formas primeiro.");
+                return;
+            }
+            System.out.println("\nFormas de Pagamento Disponíveis:");
+            System.out.printf("%-5s | %-20s%n", "ID", "Formato");
+            System.out.println("-".repeat(30));
+            for (FormaPagamento f : formas) {
+                System.out.printf("%-5d | %-20s%n", 
+                    f.getId(), f.getFormato());
+            }
+            System.out.println();
+            
+            int formaId;
+            boolean formaValida;
+            do {
+                formaId = lerInteiro("ID da Forma de Pagamento: ");
+                formaValida = false;
+                for (FormaPagamento f : formas) {
+                    if (f.getId() == formaId) {
+                        formaValida = true;
+                        break;
+                    }
+                }
+                if (!formaValida) {
+                    System.out.println("Forma de pagamento inválida! Por favor, escolha um ID da lista acima.");
+                }
+            } while (!formaValida);
             
             String tipo;
             do {
@@ -359,7 +460,7 @@ public class Main {
                 }
             } while (!tipo.equals("E") && !tipo.equals("S"));
 
-            Transacao transacao = new Transacao(valor, data, descricao, usuarioLogadoId, categoriaId, tipo);
+            Transacao transacao = new Transacao(valor, data, descricao, usuarioLogado.getId(), categoriaId, formaId, tipo);
             transacao.setId(id);
             
             transacaoService.atualizarTransacao(transacao);
@@ -371,23 +472,24 @@ public class Main {
 
     private static void excluirTransacao(TransacaoService transacaoService) {
         try {
-            // Listar todas as transações primeiro
-            List<Transacao> transacoes = transacaoService.listarTransacoes(usuarioLogadoId);
+            System.out.println("\n=== Excluir Transação ===");
+            List<Transacao> transacoes = transacaoService.listarTransacoes(usuarioLogado.getId());
+            
             if (transacoes.isEmpty()) {
-                System.out.println("Nenhuma transação encontrada para excluir.");
+                System.out.println("Não há transações cadastradas.");
                 return;
             }
 
-            System.out.println("\nLista de Transações Disponíveis:");
-            for (Transacao t : transacoes) {
-                System.out.printf("ID: %d | Descrição: %s | Valor: R$ %.2f | Data: %s | Tipo: %s%n",
-                    t.getId(), t.getDescricao(), t.getValor().doubleValue(), t.getData(), 
-                    t.getTipo().equals("E") ? "Entrada" : "Saída");
+            System.out.println("\nTransações disponíveis:");
+            for (Transacao transacao : transacoes) {
+                System.out.println(transacao);
             }
-            System.out.println("\n=== EXCLUIR TRANSAÇÃO ===");
-            int id = lerInteiro("\nID da transação a ser excluída: ");
 
-            transacaoService.excluirTransacao(id, usuarioLogadoId);
+            System.out.print("\nDigite o ID da transação que deseja excluir: ");
+            int id = scanner.nextInt();
+            scanner.nextLine(); // Limpar o buffer
+
+            transacaoService.excluirTransacao(id, usuarioLogado.getId());
             System.out.println("Transação excluída com sucesso!");
         } catch (Exception e) {
             System.out.println("Erro ao excluir transação: " + e.getMessage());
@@ -396,40 +498,17 @@ public class Main {
 
     private static void listarTodasTransacoes(TransacaoService transacaoService) {
         try {
-            List<Transacao> transacoes = transacaoService.listarTodasTransacoes(papelUsuarioLogado);
+            System.out.println("\n=== Listar Todas as Transações ===");
+            List<Transacao> transacoes = transacaoService.listarTodasTransacoes();
+            
             if (transacoes.isEmpty()) {
-                System.out.println("Nenhuma transação encontrada.");
+                System.out.println("Não há transações cadastradas.");
                 return;
             }
 
-            System.out.println("\nLista de Todas as Transações:");
-            System.out.printf("%-5s | %-20s | %-30s | %-13s | %-12s | %-8s%n", 
-                "ID", "Email do Usuário", "Descrição", "Valor", "Data", "Tipo");
-            System.out.println("-".repeat(95));
-            
-            UsuarioService usuarioService = new UsuarioService();
-            for (Transacao t : transacoes) {
-                try {
-                    // Buscar o email do usuário
-                    Usuario usuario = usuarioService.buscarUsuarioPorId(t.getUsuarioId());
-                    String emailUsuario = usuario != null ? usuario.getEmail() : "Usuário não encontrado";
-                    
-                    System.out.printf("%-5d | %-20s | %-30s | R$ %-10.2f | %-12s | %-8s%n",
-                        t.getId(), 
-                        emailUsuario,
-                        t.getDescricao().length() > 30 ? t.getDescricao().substring(0, 12) + "..." : t.getDescricao(),
-                        t.getValor().doubleValue(),
-                        t.getData(),
-                        t.getTipo().equals("E") ? "Entrada" : "Saída");
-                } catch (SQLException e) {
-                    System.out.printf("%-5d | %-20s | %-30s | R$ %-10.2f | %-12s | %-8s%n",
-                        t.getId(), 
-                        "Erro ao buscar usuário",
-                        t.getDescricao().length() > 30 ? t.getDescricao().substring(0, 12) + "..." : t.getDescricao(),
-                        t.getValor().doubleValue(),
-                        t.getData(),
-                        t.getTipo().equals("E") ? "Entrada" : "Saída");
-                }
+            System.out.println("\nTransações:");
+            for (Transacao transacao : transacoes) {
+                System.out.println(transacao);
             }
         } catch (Exception e) {
             System.out.println("Erro ao listar todas as transações: " + e.getMessage());
@@ -438,267 +517,204 @@ public class Main {
 
     private static void listarTransacoesPorPeriodo(TransacaoService transacaoService) {
         try {
-            LocalDate dataInicial, dataFinal;
+            System.out.println("\n=== Listar Transações por Período ===");
             
-            // Solicitar e validar data inicial
-            while (true) {
-                try {
-                    String dataInicialStr = lerString("Data inicial (yyyy-MM-dd): ");
-                    dataInicial = LocalDate.parse(dataInicialStr);
-                    break;
-                } catch (DateTimeParseException e) {
-                    System.out.println("Formato de data inválido. Use o formato yyyy-MM-dd (ex: 2024-03-20)");
-                }
-            }
+            System.out.print("Digite a data inicial (YYYY-MM-DD): ");
+            LocalDate dataInicio = LocalDate.parse(scanner.nextLine());
             
-            // Solicitar e validar data final
-            while (true) {
-                try {
-                    String dataFinalStr = lerString("Data final (yyyy-MM-dd): ");
-                    dataFinal = LocalDate.parse(dataFinalStr);
-                    break;
-                } catch (DateTimeParseException e) {
-                    System.out.println("Formato de data inválido. Use o formato yyyy-MM-dd (ex: 2024-03-20)");
-                }
-            }
+            System.out.print("Digite a data final (YYYY-MM-DD): ");
+            LocalDate dataFim = LocalDate.parse(scanner.nextLine());
 
-            // Se for admin, perguntar se quer ver todas ou apenas as próprias
-            Integer usuarioId = usuarioLogadoId;
-            if (papelUsuarioLogado.equalsIgnoreCase("ADMIN")) {
-                System.out.println("\n1 - Todas as transações");
-                System.out.println("2 - Minhas transações");
-                String opcao = lerString("Escolha uma opção: ").toUpperCase();
-                
-                if (opcao.equals("1")) {
-                    usuarioId = null;
-                }
-            }
-
-            // Listar transações
-            List<Transacao> transacoes = transacaoService.listarPorPeriodo(dataInicial, dataFinal, usuarioId, papelUsuarioLogado);
+            List<Transacao> transacoes = transacaoService.listarPorPeriodo(usuarioLogado.getId(), dataInicio, dataFim);
             
             if (transacoes.isEmpty()) {
-                System.out.println("Nenhuma transação encontrada para o intervalo informado.");
+                System.out.println("Não há transações no período especificado.");
                 return;
             }
 
-            System.out.println("\nLista de Transações no Período:");
-            System.out.printf("%-5s | %-30s | %-13s | %-12s | %-8s%n", 
-                "ID", "Descrição", "Valor", "Data", "Tipo");
-            System.out.println("-".repeat(75));
-            
-            for (Transacao t : transacoes) {
-                System.out.printf("%-5d | %-30s | R$ %-10.2f | %-12s | %-8s%n",
-                    t.getId(),
-                    t.getDescricao().length() > 30 ? t.getDescricao().substring(0, 27) + "..." : t.getDescricao(),
-                    t.getValor().doubleValue(),
-                    t.getData(),
-                    t.getTipo().equals("E") ? "Entrada" : "Saída");
+            System.out.println("\nTransações no período:");
+            for (Transacao transacao : transacoes) {
+                System.out.println(transacao);
             }
-        } catch (IllegalArgumentException e) {
-            System.out.println("Erro: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("Erro ao listar transações: " + e.getMessage());
+            System.out.println("Erro ao listar transações por período: " + e.getMessage());
         }
     }
 
     private static void listarTransacoesPorTipo(TransacaoService transacaoService) {
         try {
-            System.out.println("\n=== LISTAR POR TIPO ===");
-            System.out.println("1 - Entradas");
-            System.out.println("2 - Saídas");
-            int opcao = lerInteiro("Escolha uma opção: ");
+            System.out.println("\n=== Listar Transações por Tipo ===");
+            System.out.print("Digite o tipo (E para Entrada, S para Saída): ");
+            String tipo = scanner.nextLine().toUpperCase();
 
-            String tipo;
-            if (opcao == 1) {
-                tipo = "E";
-            } else if (opcao == 2) {
-                tipo = "S";
-            } else {
-                System.out.println("Opção inválida!");
+            if (!tipo.equals("E") && !tipo.equals("S")) {
+                System.out.println("Tipo inválido. Use E para Entrada ou S para Saída.");
                 return;
             }
 
-            // Se for admin, perguntar se quer ver todas ou apenas as próprias
-            Integer usuarioId = usuarioLogadoId;
-            if (papelUsuarioLogado.equalsIgnoreCase("ADMIN")) {
-                System.out.println("\n1 - Todas as transações");
-                System.out.println("2 - Minhas transações");
-                int opcaoAdmin = lerInteiro("Escolha uma opção: ");
-                
-                if (opcaoAdmin == 1) {
-                    usuarioId = null;
-                }
-            }
-
-            List<Transacao> transacoes = transacaoService.listarPorTipo(tipo, usuarioId, papelUsuarioLogado);
+            List<Transacao> transacoes = transacaoService.listarPorTipo(usuarioLogado.getId(), tipo);
             
             if (transacoes.isEmpty()) {
-                System.out.println("Nenhuma transação do tipo " + (tipo.equals("E") ? "Entrada" : "Saída") + " encontrada.");
+                System.out.println("Não há transações do tipo especificado.");
                 return;
             }
 
-            System.out.println("\nLista de Transações - " + (tipo.equals("E") ? "Entradas" : "Saídas") + ":");
-            System.out.printf("%-5s | %-30s | %-13s | %-12s | %-8s%n", 
-                "ID", "Descrição", "Valor", "Data", "Tipo");
-            System.out.println("-".repeat(75));
-            
-            for (Transacao t : transacoes) {
-                System.out.printf("%-5d | %-30s | R$ %-10.2f | %-12s | %-8s%n",
-                    t.getId(),
-                    t.getDescricao().length() > 30 ? t.getDescricao().substring(0, 27) + "..." : t.getDescricao(),
-                    t.getValor().doubleValue(),
-                    t.getData(),
-                    t.getTipo().equals("E") ? "Entrada" : "Saída");
+            System.out.println("\nTransações do tipo " + (tipo.equals("E") ? "Entrada" : "Saída") + ":");
+            for (Transacao transacao : transacoes) {
+                System.out.println(transacao);
             }
         } catch (Exception e) {
-            System.out.println("Erro ao listar transações: " + e.getMessage());
+            System.out.println("Erro ao listar transações por tipo: " + e.getMessage());
         }
     }
 
     private static void menuUsuarios() {
-        System.out.println("\n=== MENU DE USUÁRIOS ===");
-        System.out.println("1 - Listar Usuários");
-        System.out.println("2 - Adicionar Usuário");
-        System.out.println("3 - Atualizar Usuário");
-        System.out.println("4 - Excluir Usuário");
-        System.out.println("5 - Voltar");
-        System.out.println("========================");
-
-        int opcao = lerInteiro("Escolha uma opção: ");
-
         UsuarioService usuarioService = new UsuarioService();
-
-        switch (opcao) {
-            case 1:
-                listarUsuarios(usuarioService);
-                break;
-            case 2:
-                adicionarUsuario(usuarioService);
-                break;
-            case 3:
-                atualizarUsuario(usuarioService);
-                break;
-            case 4:
-                excluirUsuario(usuarioService);
-                break;
-            case 5:
-                return;
-            default:
-                System.out.println("Opção inválida!");
+        
+        while (true) {
+            System.out.println("\n=== Menu de Usuários ===");
+            System.out.println("1. Listar Usuários");
+            System.out.println("2. Cadastrar Usuário");
+            System.out.println("3. Atualizar Usuário");
+            System.out.println("4. Excluir Usuário");
+            System.out.println("0. Voltar");
+            System.out.print("Opção: ");
+            
+            int opcao = Integer.parseInt(scanner.nextLine());
+            
+            switch (opcao) {
+                case 0:
+                    return;
+                case 1:
+                    listarUsuarios(usuarioService);
+                    break;
+                case 2:
+                    cadastrarUsuario(usuarioService);
+                    break;
+                case 3:
+                    atualizarUsuario(usuarioService);
+                    break;
+                case 4:
+                    excluirUsuario(usuarioService);
+                    break;
+                default:
+                    System.out.println("Opção inválida!");
+            }
         }
     }
 
     private static void listarUsuarios(UsuarioService usuarioService) {
         try {
+            System.out.println("\n=== Lista de Usuários ===");
             List<Usuario> usuarios = usuarioService.listarUsuarios();
+            
             if (usuarios.isEmpty()) {
-                System.out.println("Nenhum usuário encontrado.");
+                System.out.println("Não há usuários cadastrados.");
                 return;
             }
 
-            System.out.println("\nLista de Usuários:");
-            System.out.printf("%-5s | %-30s | %-30s | %-10s | %-15s%n", 
-                "ID", "Nome", "Email", "Papel", "CPF");
-            System.out.println("-".repeat(95));
-            
-            for (Usuario u : usuarios) {
-                System.out.printf("%-5d | %-30s | %-30s | %-10s | %-15s%n",
-                    u.getId(),
-                    u.getNome().length() > 30 ? u.getNome().substring(0, 27) + "..." : u.getNome(),
-                    u.getEmail().length() > 30 ? u.getEmail().substring(0, 27) + "..." : u.getEmail(),
-                    u.getPapel(),
-                    u.getCpf());
+            for (Usuario usuario : usuarios) {
+                System.out.println(usuario);
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.out.println("Erro ao listar usuários: " + e.getMessage());
         }
     }
 
-    private static void adicionarUsuario(UsuarioService usuarioService) {
-        System.out.println("\n=== NOVO USUÁRIO ===");
-        String nome = lerString("Nome: ");
-        String email = lerString("Email: ");
-        String senha = lerString("Senha: ");
-        String papel = lerString("Papel (ADMIN/USUARIO): ");
-
-        try {
-            Usuario novoUsuario = new Usuario();
-            novoUsuario.setNome(nome);
-            novoUsuario.setEmail(email);
-            novoUsuario.setSenha(senha);
-            novoUsuario.setPapel(papel);
-
-            usuarioService.cadastrarUsuario(novoUsuario);
-            System.out.println("Usuário cadastrado com sucesso!");
-        } catch (Exception e) {
-            System.out.println("Erro ao cadastrar usuário: " + e.getMessage());
-        }
-    }
-
     private static void atualizarUsuario(UsuarioService usuarioService) {
-        int id = lerInteiro("ID do usuário a ser atualizado: ");
-        String nome = lerString("Novo nome: ");
-        String email = lerString("Novo email: ");
-        String senha = lerString("Nova senha: ");
-        String papel = lerString("Novo papel (ADMIN/USUARIO): ");
-
         try {
-            Usuario usuario = new Usuario();
-            usuario.setId(id);
-            usuario.setNome(nome);
-            usuario.setEmail(email);
-            usuario.setSenha(senha);
-            usuario.setPapel(papel);
+            System.out.println("\n=== Atualização de Usuário ===");
+            System.out.print("ID do usuário: ");
+            int id = Integer.parseInt(scanner.nextLine());
+
+            Usuario usuario = usuarioService.buscarUsuarioPorId(id);
+            if (usuario == null) {
+                System.out.println("Usuário não encontrado!");
+                return;
+            }
+
+            System.out.print("Novo nome [" + usuario.getNome() + "]: ");
+            String nome = scanner.nextLine();
+            if (!nome.isEmpty()) {
+                usuario.setNome(nome);
+            }
+
+            System.out.print("Novo email [" + usuario.getEmail() + "]: ");
+            String email = scanner.nextLine();
+            if (!email.isEmpty()) {
+                usuario.setEmail(email);
+            }
+
+            System.out.print("Nova senha: ");
+            String senha = scanner.nextLine();
+            if (!senha.isEmpty()) {
+                usuario.setSenha(senha);
+            }
+
+            System.out.print("Novo CPF [" + usuario.getCpf() + "]: ");
+            String cpf = scanner.nextLine();
+            if (!cpf.isEmpty()) {
+                usuario.setCpf(cpf);
+            }
+
+            System.out.print("Novo papel [" + usuario.getPapel() + "]: ");
+            String papel = scanner.nextLine().toUpperCase();
+            if (!papel.isEmpty()) {
+                usuario.setPapel(papel);
+            }
 
             usuarioService.atualizarUsuario(usuario);
             System.out.println("Usuário atualizado com sucesso!");
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.out.println("Erro ao atualizar usuário: " + e.getMessage());
         }
     }
 
     private static void excluirUsuario(UsuarioService usuarioService) {
-        int id = lerInteiro("ID do usuário a ser excluído: ");
-
         try {
+            System.out.println("\n=== Exclusão de Usuário ===");
+            System.out.print("ID do usuário: ");
+            int id = Integer.parseInt(scanner.nextLine());
+
             usuarioService.excluirUsuario(id);
             System.out.println("Usuário excluído com sucesso!");
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.out.println("Erro ao excluir usuário: " + e.getMessage());
         }
     }
 
     private static void menuCategorias() {
-        System.out.println("\n=== MENU DE CATEGORIAS ===");
-        System.out.println("1 - Listar Categorias");
-        System.out.println("2 - Adicionar Categoria");
-        System.out.println("3 - Atualizar Categoria");
-        System.out.println("4 - Excluir Categoria");
-        System.out.println("5 - Voltar");
-        System.out.println("=========================");
-
-        int opcao = lerInteiro("Escolha uma opção: ");
-
         CategoriaService categoriaService = new CategoriaService();
-
-        switch (opcao) {
-            case 1:
-                listarCategorias(categoriaService);
-                break;
-            case 2:
-                adicionarCategoria(categoriaService);
-                break;
-            case 3:
-                atualizarCategoria(categoriaService);
-                break;
-            case 4:
-                excluirCategoria(categoriaService);
-                break;
-            case 5:
-                return;
-            default:
-                System.out.println("Opção inválida!");
+        
+        while (true) {
+            System.out.println("\n=== Menu de Categorias ===");
+            System.out.println("1. Listar Categorias");
+            System.out.println("2. Adicionar Categoria");
+            System.out.println("3. Atualizar Categoria");
+            System.out.println("4. Excluir Categoria");
+            System.out.println("0. Voltar");
+            System.out.print("Opção: ");
+            
+            int opcao = Integer.parseInt(scanner.nextLine());
+            
+            switch (opcao) {
+                case 0:
+                    return;
+                case 1:
+                    listarCategorias(categoriaService);
+                    break;
+                case 2:
+                    adicionarCategoria(categoriaService);
+                    break;
+                case 3:
+                    atualizarCategoria(categoriaService);
+                    break;
+                case 4:
+                    excluirCategoria(categoriaService);
+                    break;
+                default:
+                    System.out.println("Opção inválida!");
+            }
         }
     }
 
@@ -772,6 +788,193 @@ public class Main {
         }
     }
 
+    private static void menuMetasFinanceiras() {
+        MetaFinanceiraService metaService = new MetaFinanceiraService(usuarioLogado.getCpf());
+        
+        while (true) {
+            System.out.println("\n=== Menu de Metas Financeiras ===");
+            System.out.println("1. Listar Metas");
+            System.out.println("2. Adicionar Meta");
+            System.out.println("3. Atualizar Meta");
+            System.out.println("4. Excluir Meta");
+            System.out.println("0. Voltar");
+            System.out.print("Opção: ");
+            
+            int opcao = Integer.parseInt(scanner.nextLine());
+            
+            switch (opcao) {
+                case 0:
+                    return;
+                case 1:
+                    listarMetasFinanceiras(metaService);
+                    break;
+                case 2:
+                    adicionarMetaFinanceira(metaService);
+                    break;
+                case 3:
+                    atualizarMetaFinanceira(metaService);
+                    break;
+                case 4:
+                    excluirMetaFinanceira(metaService);
+                    break;
+                default:
+                    System.out.println("Opção inválida!");
+            }
+        }
+    }
+
+    private static void listarMetasFinanceiras(MetaFinanceiraService service) {
+        try {
+            List<MetaFinanceira> metas = service.listarMetas();
+            
+            if (metas.isEmpty()) {
+                System.out.println("Nenhuma meta encontrada.");
+                return;
+            }
+
+            System.out.println("\nSuas metas:");
+            for (MetaFinanceira meta : metas) {
+                System.out.println("ID: " + meta.getId());
+                System.out.println("Saldo Atual: " + meta.getSaldoAtual());
+                System.out.println("Meta: " + meta.getMeta());
+                System.out.println("Data Prevista: " + meta.getDataPrevista());
+                System.out.println("------------------------");
+            }
+        } catch (Exception e) {
+            System.out.println("Erro ao listar metas: " + e.getMessage());
+        }
+    }
+
+    private static void adicionarMetaFinanceira(MetaFinanceiraService service) {
+        try {
+            MetaFinanceira meta = new MetaFinanceira();
+            meta.setSaldoAtual(new BigDecimal(lerString("Saldo Atual: ")));
+            meta.setMeta(new BigDecimal(lerString("Meta: ")));
+            meta.setDataPrevista(LocalDate.parse(lerString("Data Prevista (YYYY-MM-DD): ")));
+
+            service.cadastrarMeta(meta);
+            System.out.println("Meta cadastrada com sucesso!");
+        } catch (Exception e) {
+            System.out.println("Erro ao cadastrar meta: " + e.getMessage());
+        }
+    }
+
+    private static void atualizarMetaFinanceira(MetaFinanceiraService service) {
+        try {
+            int id = lerInteiro("ID da meta a ser atualizada: ");
+            MetaFinanceira meta = new MetaFinanceira();
+            meta.setId(id);
+            meta.setSaldoAtual(new BigDecimal(lerString("Novo Saldo Atual: ")));
+            meta.setMeta(new BigDecimal(lerString("Nova Meta: ")));
+            meta.setDataPrevista(LocalDate.parse(lerString("Nova Data Prevista (YYYY-MM-DD): ")));
+
+            service.atualizarMeta(meta);
+            System.out.println("Meta atualizada com sucesso!");
+        } catch (Exception e) {
+            System.out.println("Erro ao atualizar meta: " + e.getMessage());
+        }
+    }
+
+    private static void excluirMetaFinanceira(MetaFinanceiraService service) {
+        try {
+            int id = lerInteiro("ID da meta a ser excluída: ");
+            service.deletarMeta(id);
+            System.out.println("Meta excluída com sucesso!");
+        } catch (Exception e) {
+            System.out.println("Erro ao excluir meta: " + e.getMessage());
+        }
+    }
+
+    private static void menuFormasPagamento() {
+        FormaPagamentoService formaPagamentoService = new FormaPagamentoService();
+        
+        while (true) {
+            System.out.println("\n=== Menu de Formas de Pagamento ===");
+            System.out.println("1. Listar Formas de Pagamento");
+            System.out.println("2. Adicionar Forma de Pagamento");
+            System.out.println("3. Atualizar Forma de Pagamento");
+            System.out.println("4. Excluir Forma de Pagamento");
+            System.out.println("0. Voltar");
+            System.out.print("Opção: ");
+            
+            int opcao = Integer.parseInt(scanner.nextLine());
+            
+            switch (opcao) {
+                case 0:
+                    return;
+                case 1:
+                    listarFormasPagamento(formaPagamentoService);
+                    break;
+                case 2:
+                    adicionarFormaPagamento(formaPagamentoService);
+                    break;
+                case 3:
+                    atualizarFormaPagamento(formaPagamentoService);
+                    break;
+                case 4:
+                    excluirFormaPagamento(formaPagamentoService);
+                    break;
+                default:
+                    System.out.println("Opção inválida!");
+            }
+        }
+    }
+
+    private static void listarFormasPagamento(FormaPagamentoService service) {
+        try {
+            List<FormaPagamento> formas = service.listarFormas();
+            
+            if (formas.isEmpty()) {
+                System.out.println("Nenhuma forma de pagamento cadastrada.");
+                return;
+            }
+
+            System.out.println("\nFormas de pagamento cadastradas:");
+            for (FormaPagamento forma : formas) {
+                System.out.println("ID: " + forma.getId());
+                System.out.println("Formato: " + forma.getFormato());
+                System.out.println("------------------------");
+            }
+        } catch (Exception e) {
+            System.out.println("Erro ao listar formas de pagamento: " + e.getMessage());
+        }
+    }
+
+    private static void adicionarFormaPagamento(FormaPagamentoService service) {
+        try {
+            FormaPagamento forma = new FormaPagamento();
+            forma.setFormato(lerString("Formato de Pagamento: "));
+
+            service.cadastrarForma(forma);
+            System.out.println("Forma de pagamento cadastrada com sucesso!");
+        } catch (Exception e) {
+            System.out.println("Erro ao cadastrar forma de pagamento: " + e.getMessage());
+        }
+    }
+
+    private static void atualizarFormaPagamento(FormaPagamentoService service) {
+        try {
+            FormaPagamento forma = new FormaPagamento();
+            forma.setId(lerInteiro("ID da forma a ser atualizada: "));
+            forma.setFormato(lerString("Novo Formato: "));
+
+            service.atualizarForma(forma);
+            System.out.println("Forma de pagamento atualizada com sucesso!");
+        } catch (Exception e) {
+            System.out.println("Erro ao atualizar forma de pagamento: " + e.getMessage());
+        }
+    }
+
+    private static void excluirFormaPagamento(FormaPagamentoService service) {
+        try {
+            int id = lerInteiro("ID da forma a ser excluída: ");
+            service.deletarForma(id);
+            System.out.println("Forma de pagamento excluída com sucesso!");
+        } catch (Exception e) {
+            System.out.println("Erro ao excluir forma de pagamento: " + e.getMessage());
+        }
+    }
+
     private static String lerString(String mensagem) {
         System.out.print(mensagem);
         return scanner.nextLine();
@@ -795,6 +998,48 @@ public class Main {
                 return Double.parseDouble(scanner.nextLine());
             } catch (NumberFormatException e) {
                 System.out.println("Por favor, digite um número válido.");
+            }
+        }
+    }
+
+    private static void menuSistema() {
+        while (true) {
+            System.out.println("\n=== Menu do Sistema ===");
+            System.out.println("1. Usuários");
+            System.out.println("2. Categorias");
+            System.out.println("3. Formas de Pagamento");
+            System.out.println("4. Transações");
+            System.out.println("5. Metas Financeiras");
+            System.out.println("0. Logout");
+            System.out.print("Opção: ");
+            
+            int opcao = Integer.parseInt(scanner.nextLine());
+            
+            switch (opcao) {
+                case 0:
+                    usuarioLogado = null;
+                    return;
+                case 1:
+                    if (usuarioLogado.getPapel().equals("ADMIN")) {
+                        menuUsuarios();
+                    } else {
+                        System.out.println("Acesso negado! Apenas administradores podem acessar este menu.");
+                    }
+                    break;
+                case 2:
+                    menuCategorias();
+                    break;
+                case 3:
+                    menuFormasPagamento();
+                    break;
+                case 4:
+                    menuTransacoes();
+                    break;
+                case 5:
+                    menuMetasFinanceiras();
+                    break;
+                default:
+                    System.out.println("Opção inválida!");
             }
         }
     }

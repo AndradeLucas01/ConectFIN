@@ -1,9 +1,9 @@
 package repository;
 
-import model.Transacao;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import model.Transacao;
 
 public interface InterfaceTransacaoRepository {
     Transacao inserirTransacao(Transacao transacao) throws SQLException;
