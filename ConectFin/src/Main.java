@@ -19,8 +19,19 @@ public class Main {
     private static Usuario usuarioLogado = null;
 
     public static void limparTela() {
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
+        try {
+            if (System.getProperty("os.name").contains("Windows")) {
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            } else {
+                System.out.print("\033[H\033[2J");
+                System.out.flush();
+            }
+        } catch (Exception e) {
+            // Se houver erro na limpeza, apenas imprime algumas linhas em branco
+            for (int i = 0; i < 50; i++) {
+                System.out.println();
+            }
+        }
     }
 
     public static void main(String[] args) {
@@ -31,6 +42,7 @@ public class Main {
         UsuarioService usuarioService = new UsuarioService();
         
         while (true) {
+            limparTela();
             System.out.println("\n=== Menu Principal ===");
             System.out.println("1. Login");
             System.out.println("2. Cadastrar Usuário");
@@ -267,8 +279,19 @@ public class Main {
             }
 
             System.out.println("\nTransações:");
+            System.out.printf("%-5s | %-12s | %-30s | %-10s | %-10s | %-8s | %-15s%n",
+                "ID", "Data", "Descrição", "Valor", "Categoria", "Tipo", "Forma Pagto");
+            System.out.println("-".repeat(100));
+            
             for (Transacao transacao : transacoes) {
-                System.out.println(transacao);
+                System.out.printf("%-5d | %-12s | %-30s | R$ %-7.2f | %-10s | %-8s | %-15s%n",
+                    transacao.getId(),
+                    transacao.getData(),
+                    transacao.getDescricao().length() > 30 ? transacao.getDescricao().substring(0, 27) + "..." : transacao.getDescricao(),
+                    transacao.getValor().doubleValue(),
+                    transacao.getCategoriaId(),
+                    transacao.getTipo().equals("E") ? "Entrada" : "Saída",
+                    transacao.getFormaPagamentoId());
             }
         } catch (Exception e) {
             System.out.println("Erro ao listar transações: " + e.getMessage());
@@ -613,8 +636,17 @@ public class Main {
                 return;
             }
 
+            System.out.printf("%-5s | %-30s | %-30s | %-15s | %-10s%n",
+                "ID", "Nome", "Email", "CPF", "Papel");
+            System.out.println("-".repeat(95));
+            
             for (Usuario usuario : usuarios) {
-                System.out.println(usuario);
+                System.out.printf("%-5d | %-30s | %-30s | %-15s | %-10s%n",
+                    usuario.getId(),
+                    usuario.getNome().length() > 30 ? usuario.getNome().substring(0, 27) + "..." : usuario.getNome(),
+                    usuario.getEmail().length() > 30 ? usuario.getEmail().substring(0, 27) + "..." : usuario.getEmail(),
+                    usuario.getCpf(),
+                    usuario.getPapel());
             }
         } catch (SQLException e) {
             System.out.println("Erro ao listar usuários: " + e.getMessage());
@@ -726,15 +758,15 @@ public class Main {
                 return;
             }
 
-            System.out.println("\nLista de Categorias:");
-            System.out.printf("%-5s | %-30s | %-10s%n", 
+            System.out.println("\n=== Lista de Categorias ===");
+            System.out.printf("%-5s | %-40s | %-10s%n", 
                 "ID", "Nome", "Tipo");
-            System.out.println("-".repeat(50));
+            System.out.println("-".repeat(60));
             
             for (Categoria c : categorias) {
-                System.out.printf("%-5d | %-30s | %-10s%n",
+                System.out.printf("%-5d | %-40s | %-10s%n",
                     c.getId(),
-                    c.getNome().length() > 30 ? c.getNome().substring(0, 27) + "..." : c.getNome(),
+                    c.getNome().length() > 40 ? c.getNome().substring(0, 37) + "..." : c.getNome(),
                     c.getTipo());
             }
         } catch (Exception e) {
@@ -832,13 +864,19 @@ public class Main {
                 return;
             }
 
-            System.out.println("\nSuas metas:");
+            System.out.println("\n=== Metas Financeiras ===");
+            System.out.printf("%-5s | %-15s | %-15s | %-12s | %-10s%n",
+                "ID", "Saldo Atual", "Meta", "Data Prevista", "Progresso");
+            System.out.println("-".repeat(65));
+            
             for (MetaFinanceira meta : metas) {
-                System.out.println("ID: " + meta.getId());
-                System.out.println("Saldo Atual: " + meta.getSaldoAtual());
-                System.out.println("Meta: " + meta.getMeta());
-                System.out.println("Data Prevista: " + meta.getDataPrevista());
-                System.out.println("------------------------");
+                double progresso = (meta.getSaldoAtual().doubleValue() / meta.getMeta().doubleValue()) * 100;
+                System.out.printf("%-5d | R$ %-12.2f | R$ %-12.2f | %-12s | %-10.1f%%%n",
+                    meta.getId(),
+                    meta.getSaldoAtual().doubleValue(),
+                    meta.getMeta().doubleValue(),
+                    meta.getDataPrevista(),
+                    progresso);
             }
         } catch (Exception e) {
             System.out.println("Erro ao listar metas: " + e.getMessage());
@@ -929,11 +967,14 @@ public class Main {
                 return;
             }
 
-            System.out.println("\nFormas de pagamento cadastradas:");
+            System.out.println("\n=== Formas de Pagamento ===");
+            System.out.printf("%-5s | %-40s%n", "ID", "Formato");
+            System.out.println("-".repeat(50));
+            
             for (FormaPagamento forma : formas) {
-                System.out.println("ID: " + forma.getId());
-                System.out.println("Formato: " + forma.getFormato());
-                System.out.println("------------------------");
+                System.out.printf("%-5d | %-40s%n",
+                    forma.getId(),
+                    forma.getFormato().length() > 40 ? forma.getFormato().substring(0, 37) + "..." : forma.getFormato());
             }
         } catch (Exception e) {
             System.out.println("Erro ao listar formas de pagamento: " + e.getMessage());
@@ -1004,6 +1045,7 @@ public class Main {
 
     private static void menuSistema() {
         while (true) {
+            limparTela();
             System.out.println("\n=== Menu do Sistema ===");
             System.out.println("1. Usuários");
             System.out.println("2. Categorias");
